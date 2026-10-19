@@ -1,0 +1,1093 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prova Compressione</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --ink: #1d2433; --muted: #6b7385; --line: #dde1e8;
+    --accent: #e8703a; --ok: #1f8a4c; --ok-bg: #e3f5ea; --ko: #c62f2f; --ko-bg: #fbe5e5; --warn-bg: #fff6d6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { background: var(--card); border-bottom: 1px solid var(--line); padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  header h1 { font-size: 20px; margin: 0; margin-right: auto; }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px 20px 40px; display: grid; gap: 16px; }
+  main > *, .top > * { min-width: 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 12px; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .status { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #b9bfca; }
+  .dot.on { background: var(--ok); }
+  .dot.wait { background: #e0a800; }
+  .top { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .top { grid-template-columns: 1fr; } }
+  .live { display: flex; gap: 28px; align-items: flex-end; flex-wrap: wrap; }
+  .live .big { font-size: 64px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .live .mid { font-size: 34px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+  .live .unit { font-size: 15px; color: var(--muted); font-weight: 500; }
+  .live .lbl { font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .live-note { margin-top: 10px; font-size: 13px; color: var(--muted); min-height: 18px; }
+  .live-note.stale { color: var(--ko); }
+  .fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 560px) { .fields { grid-template-columns: 1fr 1fr; } }
+  label.f { display: flex; flex-direction: column; font-size: 12px; color: var(--muted); gap: 4px; }
+  input, select { font: inherit; color: var(--ink); padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: #fff; min-width: 0; }
+  .article-info { margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .points { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .points button { min-width: 150px; padding: 12px 16px; font-weight: 600; }
+  .points button small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+  .points button.sel { border: 2px solid var(--accent); box-shadow: 0 0 0 3px #e8703a33; }
+  .points button .rec-val { display: block; margin-top: 4px; color: var(--ok); font-weight: 700; font-size: 13px; }
+  .zone-head { font-size: 15px; margin-bottom: 12px; padding: 8px 10px; background: var(--bg); border-radius: 7px; }
+  .zone-head b { font-size: 18px; }
+  .circ-check { font-size: 13px; margin-top: 4px; font-weight: 600; }
+  .circ-check.ok { color: var(--ok); }
+  .circ-check.ko { color: var(--ko); }
+  .circ-check.err { background: var(--ko-bg); border: 1px solid var(--ko); border-radius: 6px; padding: 6px 8px; font-size: 14px; }
+  button.rec { width: 100%; margin-top: 14px; padding: 14px; font-size: 17px; }
+  .points button .mid-hint { display: block; margin: 3px 0; color: var(--accent); font-size: 13px; }
+  td.out { color: var(--ko); font-weight: 700; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .points button.done { border-color: var(--ok); background: var(--ok-bg); }
+  .side { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+  .side label { display: flex; align-items: center; gap: 4px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px; cursor: pointer; color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+  th { font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+  td.num, th.num { text-align: right; }
+  .esito { font-weight: 700; padding: 2px 8px; border-radius: 5px; }
+  .esito.ok { color: var(--ok); background: var(--ok-bg); }
+  .esito.tol { color: #6b5600; background: #ffe45c; }
+  .esito.ko { color: var(--ko); background: var(--ko-bg); }
+  .esito.na { color: var(--muted); }
+  .tbl-wrap { overflow-x: auto; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .del { border: none; color: var(--muted); padding: 2px 6px; }
+  .empty { color: var(--muted); padding: 14px 8px; }
+  .warn { background: var(--warn-bg); border: 1px solid #ecd27a; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+  .charts { display: flex; flex-wrap: wrap; gap: 20px; }
+  .chart { flex: 1 1 480px; max-width: 680px; break-inside: avoid; }
+  .chart-title { font-weight: 600; margin-bottom: 6px; }
+  .chart-title span { color: var(--muted); font-weight: 400; font-size: 13px; }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .chart svg .zona { cursor: pointer; }
+  .custom-btn { margin-left: auto; padding: 6px 14px; font-weight: 600; }
+  .custom-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .custom-box { background: #fff4ec; border: 1px solid #f3c6aa; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+  .custom-box .ct { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .custom-box .cg { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .custom-box label { display: flex; flex-direction: column; font-size: 12px; color: var(--muted); gap: 3px; }
+  .custom-box input { width: 100%; }
+  .points button .need { display: block; color: var(--ko); font-size: 12px; margin: 3px 0; }
+  .lang { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .lang button { border: none; border-radius: 0; padding: 6px 12px; font-weight: 600; color: var(--muted); }
+  .lang button.on { background: var(--ink); color: #fff; }
+  /* Stampa (A4 verticale): prima i dati numerici, poi i grafici affiancati. */
+  #printData, #printFinal { display: none; }
+  @page { size: A4 portrait; margin: 12mm; }
+  @media print {
+    header, .no-print, .del, .screen-only { display: none !important; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: #fff; font-size: 10.5pt; }
+    main { padding: 0; gap: 6mm; max-width: none; display: flex; flex-direction: column; }
+    .card { border: none; padding: 0; border-radius: 0; }
+    #printData { display: block; order: 1; }
+    #chartCard { order: 2; }
+    #printFinal { display: block; order: 3; }
+    .sel-halo { display: none; }
+    #chartCard h2 { margin: 0 0 3mm; }
+    .charts { gap: 4mm; }
+    .chart { flex: 0 0 100%; max-width: 100%; }
+    .chart svg { margin: 0 auto; }
+    .chart-title { font-size: 9pt; }
+    .chart-title span { font-size: 8pt; }
+  }
+  /* Misura dei dati di stampa alla larghezza della pagina A4, per dimensionare il grafico. */
+  body.print-measure #printData, body.print-measure #printFinal { display: block; position: absolute; left: -10000px; top: 0; width: 186mm; font-size: 10.5pt; }
+  .pf-box { break-inside: avoid; border: 2px solid var(--ink); border-radius: 6px; display: flex; margin-top: 4mm; }
+  .pf-left { flex: 1.4; padding: 3mm 4mm; border-right: 1px solid var(--line); }
+  .pf-right { flex: 1; padding: 3mm 4mm; display: flex; flex-direction: column; }
+  .pf-h { font-size: 8pt; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; margin-bottom: 2mm; }
+  .pf-capo { display: flex; justify-content: space-between; align-items: center; gap: 3mm; padding: 1.5mm 0; border-top: 1px solid var(--line); }
+  .pf-capo:first-of-type { border-top: none; }
+  .pf-capo .nm { font-size: 9.5pt; font-weight: 600; }
+  .pf-capo .nt { font-size: 8pt; color: var(--muted); font-weight: 400; }
+  .verdetto { font-weight: 800; font-size: 13pt; padding: 1.5mm 4mm; border-radius: 4px; white-space: nowrap; letter-spacing: .03em; }
+  .verdetto.ok { color: #fff; background: var(--ok); }
+  .verdetto.ko { color: #fff; background: var(--ko); }
+  .pf-firma { margin-top: auto; border-bottom: 1px solid var(--ink); height: 16mm; }
+  .pf-sub { font-size: 8.5pt; color: var(--muted); margin-top: 1.5mm; }
+  .pd-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--ink); padding-bottom: 2mm; margin-bottom: 4mm; }
+  .pd-head h1 { font-size: 16pt; margin: 0; }
+  .pd-head div { font-size: 9.5pt; text-align: right; color: var(--muted); }
+  .pd-capo { break-inside: avoid; margin-bottom: 5mm; }
+  .pd-title { font-weight: 700; font-size: 11pt; margin-bottom: 1mm; }
+  .pd-title span { font-weight: 400; color: var(--muted); }
+  .pd-sum { font-size: 9pt; color: var(--muted); margin-bottom: 1.5mm; }
+  .pd-capo table { font-size: 9.5pt; border: 1px solid var(--line); }
+  .pd-capo th { background: #eef0f4; font-size: 8pt; padding: 4px 6px; }
+  .pd-capo td { padding: 3px 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 data-i18n>Prova Compressione</h1>
+  <div class="lang no-print" id="langBox"><button data-lang="it">IT</button><button data-lang="en">EN</button></div>
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">Misuratore non collegato</span></div>
+  <button class="primary" id="btnConnect">Collega misuratore</button>
+</header>
+
+<main>
+  <div id="noSerial" class="warn" hidden data-i18n-html>Questo browser non può collegarsi al misuratore. Apri questo file con <b>Google Chrome</b> o <b>Microsoft Edge</b>.</div>
+
+  <section class="card no-print">
+      <h2 data-i18n>1 · Capo in prova</h2>
+      <div class="fields">
+        <label class="f"><span data-i18n>Articolo</span>
+          <input id="articolo" list="articoli" placeholder="es. HUPLA6" autocomplete="off">
+          <datalist id="articoli"></datalist>
+        </label>
+        <label class="f"><span data-i18n>Taglia</span> <select id="taglia"></select></label>
+        <label class="f"><span data-i18n>Colore</span> <input id="colore"></label>
+        <label class="f"><span data-i18n>Ordine / lotto</span> <input id="ordine"></label>
+        <label class="f"><span data-i18n>Operatore</span> <input id="operatore" value="Andrea"></label>
+        <label class="f"><span data-i18n>Data</span> <input id="data" type="date"></label>
+      </div>
+      <div class="article-info" id="articleInfo"></div>
+  </section>
+
+  <div class="top no-print">
+    <section class="card">
+      <h2 data-i18n>2 · Zona da misurare</h2>
+      <div class="side" id="sideBox" hidden><span data-i18n>Lato</span>
+        <label><input type="radio" name="lato" value="dx"><span data-i18n>dx</span></label>
+        <label><input type="radio" name="lato" value="sx"><span data-i18n>sx</span></label>
+        <label><input type="radio" name="lato" value="" checked>–</label>
+        <button type="button" class="custom-btn" id="btnCustom">Custom</button>
+      </div>
+      <div class="custom-box" id="customBox" hidden></div>
+      <div class="points" id="points"></div>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n>3 · Misura</h2>
+      <div class="zone-head" id="zoneHead"></div>
+      <div class="live">
+        <div><div class="lbl" data-i18n>Compressione</div><span class="big" id="liveMmhg">–</span> <span class="unit">mmHg</span></div>
+        <div><div class="lbl" data-i18n>Circonferenza</div><span class="mid" id="liveCirc">–</span> <span class="unit">cm</span>
+          <div class="circ-check" id="circCheck"></div></div>
+      </div>
+      <div class="live-note" id="liveNote"></div>
+      <button class="primary rec" id="btnRec" disabled>Registra</button>
+      <div class="muted" data-i18n>Puoi anche premere la barra spaziatrice.</div>
+    </section>
+  </div>
+
+  <section id="printData"></section>
+  <section id="printFinal"></section>
+
+  <section class="card" id="chartCard">
+    <h2 data-i18n>Grafico</h2>
+    <div class="charts" id="charts"></div>
+  </section>
+
+  <section class="card screen-only">
+    <h2 data-i18n>Misure registrate</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th data-i18n>Ora</th><th data-i18n>Articolo</th><th data-i18n>Taglia</th><th data-i18n>Colore</th><th data-i18n>Ordine / lotto</th><th data-i18n>Punto</th><th data-i18n>Lato</th>
+            <th class="num" data-i18n>Range taglia (cm)</th><th class="num" data-i18n>Circ. (cm)</th><th class="num">mmHg</th><th class="num" data-i18n>Atteso (mmHg)</th><th data-i18n>Esito</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="actions no-print">
+      <button id="btnCsv" data-i18n>Esporta Excel (CSV)</button>
+      <button id="btnPrint" data-i18n>Stampa / PDF</button>
+      <button id="btnClear" data-i18n>Svuota tabella</button>
+    </div>
+  </section>
+</main>
+
+<script>
+// ---------------------------------------------------------------------------
+// Lingua: i testi sono scritti in italiano, EN contiene la traduzione inglese.
+// {0}, {1}... = valori inseriti nel testo.
+// ---------------------------------------------------------------------------
+const EN = {
+  "Prova Compressione": "Compression Test",
+  "Misuratore non collegato": "Meter not connected",
+  "Collega misuratore": "Connect meter",
+  "Scollega": "Disconnect",
+  "Errore: {0}": "Error: {0}",
+  "Collegato – in attesa di una misura": "Connected – waiting for a measurement",
+  "Collegato – misura in corso": "Connected – measuring",
+  "Questo browser non può collegarsi al misuratore. Apri questo file con <b>Google Chrome</b> o <b>Microsoft Edge</b>.": "This browser cannot connect to the meter. Open this file with <b>Google Chrome</b> or <b>Microsoft Edge</b>.",
+  "1 · Capo in prova": "1 · Garment under test",
+  "Articolo": "Item",
+  "Taglia": "Size",
+  "Colore": "Colour",
+  "Ordine / lotto": "Order / batch",
+  "Operatore": "Operator",
+  "Data": "Date",
+  "es. HUPLA6": "e.g. HUPLA6",
+  "2 · Zona da misurare": "2 · Zone to measure",
+  "Lato": "Side",
+  "dx": "R",
+  "sx": "L",
+  "Inserisci l'articolo per vedere le zone di misura.": "Enter the item to see the measuring zones.",
+  "3 · Misura": "3 · Measurement",
+  "Seleziona prima la zona da misurare.": "First select the zone to measure.",
+  "Compressione": "Compression",
+  "Circonferenza": "Circumference",
+  "Collega il misuratore e avvia una misura.": "Connect the meter and start a measurement.",
+  "In attesa di una misura…": "Waiting for a measurement…",
+  "Misura in corso – premi Registra per salvarla in {0}.": "Measuring – press Record to save it to {0}.",
+  "Misura in corso – seleziona la zona.": "Measuring – select the zone.",
+  "Nessun dato da più di 2 secondi: valore non aggiornato.": "No data for more than 2 seconds: value not updated.",
+  "nel range": "in range",
+  "fuori range": "out of range",
+  "sul valore medio": "on the mid value",
+  "{0} cm dal medio": "{0} cm from mid value",
+  "Registra": "Record",
+  "Registra in {0}": "Record to {0}",
+  "Puoi anche premere la barra spaziatrice.": "You can also press the space bar.",
+  "Grafico": "Chart",
+  "Misure registrate": "Recorded measurements",
+  "Ora": "Time",
+  "Punto": "Zone",
+  "Range taglia (cm)": "Size range (cm)",
+  "Circ. (cm)": "Circ. (cm)",
+  "Atteso (mmHg)": "Expected (mmHg)",
+  "Esito": "Result",
+  "Esporta Excel (CSV)": "Export Excel (CSV)",
+  "Stampa / PDF": "Print / PDF",
+  "Svuota tabella": "Clear table",
+  "Nessuna misura registrata.": "No measurements recorded.",
+  "Elimina riga": "Delete row",
+  "Svuotare la tabella delle misure registrate?": "Clear the table of recorded measurements?",
+  "Articolo non presente nelle tabelle taglie.": "Item not found in the size tables.",
+  "tabella di {0}": "table of {0}",
+  "classe {0}": "class {0}",
+  "classe di compressione non indicata": "compression class not specified",
+  "Zona": "Zone",
+  "prova a {0} cm": "test at {0} cm",
+  "atteso {0} mmHg": "expected {0} mmHg",
+  "atteso mmHg: –": "expected mmHg: –",
+  "range {0}: {1} cm": "range {0}: {1} cm",
+  "range {0} · medio {1}": "range {0} · mid {1}",
+  "da misurare": "to be measured",
+  "medio {0}": "mid {0}",
+  "custom {0} cm": "custom {0} cm",
+  "ERRORE: circonferenza diversa di {0} cm da quella indicata ({1} cm)": "ERROR: circumference differs by {0} cm from the indicated one ({1} cm)",
+  "sul valore indicato": "on the indicated value",
+  "{0} cm dal valore indicato": "{0} cm from the indicated value",
+  "diversa di {0} cm": "differs by {0} cm",
+  "Controllo circonferenza": "Circumference check",
+  "Circonferenze custom (cm)": "Custom circumferences (cm)",
+  "lato {0}": "side {0}",
+  "circonferenza custom da inserire": "custom circumference to be entered",
+  "Tipo range": "Range type",
+  "taglia": "size",
+  "Medio (cm)": "Mid (cm)",
+  "Risultato finale": "Final result",
+  "APPROVATO": "APPROVED",
+  "NON APPROVATO": "NOT APPROVED",
+  "Firma operatore": "Operator signature",
+  "Parametri non conformi: {0}": "Non-compliant parameters: {0}",
+  "Zone non misurate: {0}": "Zones not measured: {0}",
+  "Misure: {0}": "Measurements: {0}",
+  "OK in tolleranza: {0}": "OK within tolerance: {0}",
+  "BASSO / ALTO: {0}": "LOW / HIGH: {0}",
+  "Compressione (mmHg)": "Compression (mmHg)",
+  "Inserisci l'articolo per vedere il grafico.": "Enter the item to see the chart.",
+  "Prova compressione": "Compression test",
+  "Avvia simulazione": "Start simulation",
+  "Simulazione": "Simulation",
+  // Famiglie e zone
+  "Leggings a compressione": "Compression leggings",
+  "Leggings estivi (lunghezza caviglia)": "Summer leggings (ankle length)",
+  "Bolero / manichette": "Bolero / sleeves",
+  "Maglie a compressione": "Compression tops",
+  "Gambaletto trama piatta": "Flat-knit knee-high",
+  "Caviglia": "Ankle", "Polpaccio": "Calf", "Coscia": "Thigh", "Fianchi": "Hips", "Vita": "Waist",
+  "Gomito": "Elbow", "Ascella": "Armpit", "Busto": "Bust", "Sotto ginocchio": "Below knee",
+  // Esiti
+  "BASSO": "LOW", "ALTO": "HIGH", "OK (tolleranza)": "OK (tolerance)",
+  // Excel
+  "Range taglia min (cm)": "Size range min (cm)", "Range taglia max (cm)": "Size range max (cm)",
+  "Valore medio (cm)": "Mid value (cm)", "Circonferenza (cm)": "Circumference (cm)",
+  "Classe": "Class", "Atteso min": "Expected min", "Atteso max": "Expected max"
+};
+let LANG = "it";
+try { if (localStorage.getItem("pc_lang") === "en") LANG = "en"; } catch (e) {}
+function tr(s, ...a) {
+  const t = LANG === "en" && EN[s] != null ? EN[s] : s;
+  return t.replace(/\{(\d)\}/g, (m, i) => a[i]);
+}
+
+// ---------------------------------------------------------------------------
+// Articoli e punti di misura (da Custom Size.txt). I codici Custom (C...) usano
+// la tabella del codice standard (H...): CUPLA6 -> HUPLA6.
+// ---------------------------------------------------------------------------
+const GRUPPI = {
+  leggings: {
+    nome: "Leggings a compressione",
+    articoli: ["HUPLA4","HUPLA6","HUPLA8","HUPLI4","HUPLI6","HUPLO4","HUPLO4n","HUPLO6","HIPLO4","HIPLO6"],
+    taglie: ["XXS","XS","XSs","S","Ss","M","Ms","L","Ls","XL","XLs","2XL","2XLs","3XL","3XLs","4XL"],
+    lati: true,
+    punti: [["E","Caviglia"],["A","Polpaccio"],["B","Coscia"],["C","Fianchi"],["D","Vita"]]
+  },
+  estivi: {
+    nome: "Leggings estivi (lunghezza caviglia)",
+    articoli: ["HUPLE5","HUPLE7"],
+    taglie: ["XXS","XS","S","M","L","XL","2XL","3XL"],
+    lati: true,
+    punti: [["E","Caviglia"],["A","Polpaccio"],["B","Coscia"],["C","Fianchi"],["D","Vita"]]
+  },
+  bolero: {
+    nome: "Bolero / manichette",
+    articoli: ["HHBAR2","HHBAR3","HHBAR4","SUCLY1"],
+    taglie: ["XXS","XS","S/M","L/XL","XXL"],
+    lati: true,
+    punti: [["GO","Gomito"],["AS","Ascella"],["BU","Busto"]]
+  },
+  maglie: {
+    nome: "Maglie a compressione",
+    articoli: ["HUCLA3","HUCLA4"],
+    taglie: ["XS","S","M","L","XL","2XL"],
+    lati: true,
+    punti: [["GO","Gomito"],["AS","Ascella"],["BU","Busto"]]
+  },
+  gambaletto: {
+    nome: "Gambaletto trama piatta",
+    articoli: ["HULEG1","HULEG2"],
+    taglie: ["1/XS","2/S","3/M","4/L","5/XL","6/XXL"],
+    lati: true,
+    punti: [["cB","Caviglia"],["cC","Polpaccio"],["cD","Sotto ginocchio"]]
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Range delle circonferenze in cm per taglia e punto (da Custom Size.txt).
+// Le taglie corte ("s": XSs, Ls, 2XLs...) hanno le stesse circonferenze della taglia normale.
+// ---------------------------------------------------------------------------
+const LEGGINGS_CM = {
+  XXS: { A: [26, 30], B: [40, 46], C: [68, 80],   D: [50, 75],   E: [15, 17] },
+  XS:  { A: [30, 34], B: [46, 52], C: [78, 90],   D: [60, 85],   E: [17, 20] },
+  S:   { A: [34, 38], B: [52, 58], C: [88, 100],  D: [70, 95],   E: [20, 23] },
+  M:   { A: [38, 42], B: [58, 64], C: [98, 110],  D: [80, 105],  E: [23, 26] },
+  L:   { A: [42, 46], B: [64, 70], C: [108, 120], D: [90, 115],  E: [26, 29] },
+  XL:  { A: [46, 50], B: [70, 76], C: [118, 130], D: [100, 125], E: [29, 32] },
+  "2XL": { A: [50, 54], B: [77, 88],   C: [130, 145], D: [115, 140], E: [32, 35] },
+  "3XL": { A: [54, 58], B: [89, 100],  C: [145, 160], D: [130, 155], E: [35, 38] },
+  "4XL": { A: [58, 64], B: [100, 120], C: [160, 190], D: [150, 180], E: [38, 40] }
+};
+const RANGE_CM = {
+  leggings: LEGGINGS_CM,
+  estivi: LEGGINGS_CM,
+  bolero: {
+    XXS:    { AS: [20, 25], GO: [18, 22], BU: [65, 80] },
+    XS:     { AS: [25, 30], GO: [22, 26], BU: [75, 90] },
+    "S/M":  { AS: [30, 35], GO: [26, 30], BU: [85, 100] },
+    "L/XL": { AS: [35, 40], GO: [30, 34], BU: [95, 110] },
+    XXL:    { AS: [40, 45], GO: [34, 38], BU: [105, 120] }
+  },
+  maglie: {
+    XS:    { AS: [20, 24], GO: [18, 22], BU: [60, 75] },
+    S:     { AS: [24, 28], GO: [21, 25], BU: [70, 85] },
+    M:     { AS: [28, 32], GO: [24, 28], BU: [80, 95] },
+    L:     { AS: [32, 36], GO: [27, 31], BU: [90, 105] },
+    XL:    { AS: [36, 40], GO: [30, 34], BU: [100, 115] },
+    "2XL": { AS: [40, 45], GO: [33, 38], BU: [110, 125] }
+  },
+  gambaletto: {
+    "1/XS":  { cD: [28, 34], cC: [30, 36], cB: [17, 20] },
+    "2/S":   { cD: [32, 38], cC: [34, 40], cB: [20, 23] },
+    "3/M":   { cD: [36, 42], cC: [38, 44], cB: [23, 26] },
+    "4/L":   { cD: [40, 46], cC: [42, 48], cB: [26, 29] },
+    "5/XL":  { cD: [44, 50], cC: [46, 52], cB: [29, 32] },
+    "6/XXL": { cD: [48, 54], cC: [50, 56], cB: [32, 35] }
+  }
+};
+function rangeCm(taglia, punto, art = $("articolo").value) {
+  const g = trovaGruppo(codiceBase(art));
+  if (!g || !RANGE_CM[g]) return null;
+  const t = RANGE_CM[g][taglia] || RANGE_CM[g][(taglia.match(/^(.+?)s$/) || [])[1]];
+  return t && t[punto] ? t[punto] : null;
+}
+
+// ---------------------------------------------------------------------------
+// Classe di compressione per articolo e range in mmHg della classe.
+// Articoli lipedema a compressione costante: il range della classe vale per tutte le zone del capo.
+// ---------------------------------------------------------------------------
+const CLASSI_MMHG = { K1: [15, 20], K2: [25, 30], K3: [35, 40] };
+const CLASSE = {
+  HUPLA4: "K1", HUPLA6: "K2", HUPLA8: "K3", HUPLI4: "K1", HUPLI6: "K2",
+  HUPLO4: "K1", HUPLO4n: "K1", HUPLO6: "K2", HIPLO4: "K1", HIPLO6: "K2",
+  HUPLE5: "K1", HUPLE7: "K2",
+  HHBAR2: "K1", HHBAR3: "K1", HHBAR4: "K2", SUCLY1: "K1",
+  HUCLA3: "K1", HUCLA4: "K2",
+  HULEG1: "K1", HULEG2: "K2"
+};
+
+// Eccezioni per singolo articolo/zona (hanno la precedenza sulla classe).
+// "*" = tutte le taglie; si può indicare una taglia specifica.
+// Esempio:  HUPLA6: { "*": { E: [25, 30], D: [20, 25] } }
+const ATTESI = {
+};
+
+function classeDi(articolo) {
+  const base = codiceBase(articolo).toUpperCase();
+  const key = Object.keys(CLASSE).find(k => k.toUpperCase() === base);
+  return key ? CLASSE[key] : null;
+}
+
+// ---------------------------------------------------------------------------
+
+const $ = id => document.getElementById(id);
+const dec = s => LANG === "en" ? s : s.replace(".", ",");
+const fmt = (n, d = 1) => n == null || isNaN(n) ? "–" : dec(n.toFixed(d));
+const fmtN = n => n == null || isNaN(n) ? "–" : dec(String(+n.toFixed(1)));
+
+function codiceBase(cod) {
+  cod = (cod || "").trim();
+  if (/^C/i.test(cod)) {
+    const h = "H" + cod.slice(1);
+    if (trovaGruppo(h)) return h;
+    if (/^CUBAR/i.test(cod)) return "HHBAR" + cod.slice(5);
+  }
+  return cod;
+}
+function trovaGruppo(cod) {
+  const c = (cod || "").toUpperCase();
+  for (const [k, g] of Object.entries(GRUPPI)) if (g.articoli.some(a => a.toUpperCase() === c)) return k;
+  return null;
+}
+function atteso(articolo, taglia, punto) {
+  const base = codiceBase(articolo);
+  const key = Object.keys(ATTESI).find(k => k.toUpperCase() === base.toUpperCase());
+  const a = key ? ATTESI[key] : {};
+  const k = classeDi(articolo);
+  const v = (a[taglia] && a[taglia][punto]) || (a["*"] && a["*"][punto]);
+  if (v) return v;
+  if (!k) return null;
+  const c = CLASSI_MMHG[k];
+  // Vita e fianchi: si controlla solo il massimo (minimo 0 = nessuna verifica).
+  return ZONE_SOLO_MAX.includes(punto) ? [0, c[1]] : c;
+}
+const ZONE_SOLO_MAX = ["C", "D"];
+// Range atteso in testo: "25–30", oppure "≤ 30" se si controlla solo il massimo.
+function fmtAtt(min, max) { return min > 0 ? fmtN(min) + "–" + fmtN(max) : "≤ " + fmtN(max); }
+
+// ---------------- Lettura dal misuratore (Web Serial, 9600 baud) ------------
+const live = { circMm: null, mmhg: null, t: 0 };
+let port = null, reader = null;
+
+function onLine(line) {
+  let m;
+  if ((m = line.match(/CIRC\.\s*\[mm\]:\s*([\d.]+)/i))) live.circMm = parseFloat(m[1]);
+  else if ((m = line.match(/COMP\.\s*\[mmHg\]:\s*([\d.]+)/i))) { live.mmhg = parseFloat(m[1]); live.t = Date.now(); renderLive(); }
+}
+
+async function connect() {
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 9600 });
+  } catch (e) {
+    if (e.name !== "NotFoundError") setStatus("off", "Errore: {0}", e.message);
+    return;
+  }
+  setStatus("wait", "Collegato – in attesa di una misura");
+  $("btnConnect").textContent = tr("Scollega");
+  const decoder = new TextDecoderStream("latin1");
+  const done = port.readable.pipeTo(decoder.writable).catch(() => {});
+  reader = decoder.readable.getReader();
+  let buf = "";
+  try {
+    while (true) {
+      const { value, done: end } = await reader.read();
+      if (end) break;
+      buf += value;
+      const parts = buf.split(/\r?\n/);
+      buf = parts.pop();
+      parts.forEach(onLine);
+    }
+  } catch (e) { /* porta chiusa */ }
+  await done;
+}
+
+async function disconnect() {
+  try { if (reader) await reader.cancel(); } catch (e) {}
+  try { if (port) await port.close(); } catch (e) {}
+  port = reader = null;
+  setStatus("off", "Misuratore non collegato");
+  $("btnConnect").textContent = tr("Collega misuratore");
+}
+
+let statusTxt = ["Misuratore non collegato"];
+function setStatus(kind, ...text) {
+  $("dot").className = "dot" + (kind === "on" ? " on" : kind === "wait" ? " wait" : "");
+  statusTxt = text;
+  $("statusText").textContent = tr(...text);
+}
+
+function isFresh() { return live.mmhg != null && Date.now() - live.t < 2000; }
+
+function renderLive() {
+  $("liveMmhg").textContent = fmt(live.mmhg);
+  $("liveCirc").textContent = live.circMm == null ? "–" : fmt(live.circMm / 10);
+  const note = $("liveNote"), fresh = isFresh(), z = selZona();
+  if (live.mmhg == null) { note.textContent = tr(port ? "In attesa di una misura…" : "Collega il misuratore e avvia una misura."); note.className = "live-note"; }
+  else if (fresh) { note.textContent = z ? tr("Misura in corso – premi Registra per salvarla in {0}.", tr(z.nome)) : tr("Misura in corso – seleziona la zona."); note.className = "live-note"; if (port) setStatus("on", "Collegato – misura in corso"); }
+  else { note.textContent = tr("Nessun dato da più di 2 secondi: valore non aggiornato."); note.className = "live-note stale"; if (port) setStatus("wait", "Collegato – in attesa di una misura"); }
+
+  // Circonferenza attuale rispetto al range della zona selezionata.
+  const cc = $("circCheck");
+  if (z && z.range && live.circMm != null) {
+    const c = live.circMm / 10, mid = (z.range[0] + z.range[1]) / 2, d = c - mid;
+    const err = circErr(c, mid), dd = (d > 0 ? "+" : "−") + fmtN(Math.abs(d));
+    cc.className = "circ-check " + (err ? "ko err" : "ok");
+    cc.textContent = err ? "⚠ " + tr("ERRORE: circonferenza diversa di {0} cm da quella indicata ({1} cm)", dd, fmtN(mid))
+      : "✓ " + (Math.abs(d) < 0.05 ? tr("sul valore indicato") : tr("{0} cm dal valore indicato", dd));
+  } else { cc.className = "circ-check"; cc.textContent = ""; }
+
+  const rec = $("btnRec");
+  rec.disabled = !(fresh && z);
+  rec.textContent = z ? tr("Registra in {0}", tr(z.nome) + (z.lato ? " " + tr(z.lato) : "")) : tr("Registra");
+}
+setInterval(renderLive, 500);
+
+// ---------------- Capo in prova e punti --------------------------------------
+function currentGroup() { return GRUPPI[trovaGruppo(codiceBase($("articolo").value))] || null; }
+
+function onArticolo() {
+  const g = currentGroup();
+  const sel = $("taglia"), prev = sel.value;
+  sel.innerHTML = g ? g.taglie.map(t => `<option>${t}</option>`).join("") : "";
+  if (g && g.taglie.includes(prev)) sel.value = prev;
+  const cod = $("articolo").value.trim(), base = codiceBase(cod);
+  let info = "";
+  if (cod && !g) info = tr("Articolo non presente nelle tabelle taglie.");
+  else if (g) {
+    info = tr(g.nome) + (base.toUpperCase() !== cod.toUpperCase() ? " · " + tr("tabella di {0}", base) : "");
+    const k = classeDi(cod);
+    info += " · " + (k ? tr("classe {0}", k) + ` (${CLASSI_MMHG[k][0]}–${CLASSI_MMHG[k][1]} mmHg)` : tr("classe di compressione non indicata"));
+  }
+  $("articleInfo").textContent = info;
+  saveForm();
+  renderCustomBox();
+  renderPoints();
+}
+
+// Zona selezionata prima della misura.
+let selPunto = null;
+const getLato = () => document.querySelector('input[name=lato]:checked')?.value || "";
+
+// Modalità Custom (taglie su misura): le circonferenze da provare le inserisce l'operatore,
+// per zona e lato. Il valore inserito è il "valore medio" con tolleranza ±0,5 cm.
+const CUSTOM_TOL_CM = 1;
+let custom = { on: false, cm: {} };
+function customCm(k, lato) {
+  const v = custom.cm[k + "|" + lato] ?? custom.cm[k + "|"];
+  return v > 0 ? v : null;
+}
+function zonaRange(k, lato) {
+  if (custom.on) {
+    const v = customCm(k, lato);
+    return { custom: true, mid: v, range: v ? [v - CUSTOM_TOL_CM, v + CUSTOM_TOL_CM] : null };
+  }
+  const r = rangeCm($("taglia").value, k);
+  return { custom: false, mid: r ? (r[0] + r[1]) / 2 : null, range: r };
+}
+function rangeLabel(zr) {
+  return zr.custom ? tr("custom {0} cm", fmtN(zr.mid)) : tr("range {0}: {1} cm", esc($("taglia").value), fmtN(zr.range[0]) + "–" + fmtN(zr.range[1]));
+}
+
+function renderCustomBox() {
+  const g = currentGroup(), box = $("customBox");
+  $("btnCustom").classList.toggle("on", custom.on);
+  box.hidden = !(g && custom.on);
+  if (box.hidden) return;
+  const lato = getLato();
+  box.innerHTML = `<div class="ct">${tr("Circonferenze custom (cm)")}${lato ? " · " + tr("lato {0}", tr(lato)) : ""}</div><div class="cg">` +
+    g.punti.map(([k, n]) => `<label>${esc(tr(n))}<input type="number" step="0.5" min="0" inputmode="decimal" data-k="${k}" value="${custom.cm[k + "|" + lato] ?? ""}"></label>`).join("") + `</div>`;
+}
+$("btnCustom").onclick = () => { custom.on = !custom.on; saveForm(); renderCustomBox(); renderPoints(); renderLive(); };
+$("customBox").addEventListener("input", e => {
+  const k = e.target.dataset.k;
+  if (!k) return;
+  const v = parseFloat(String(e.target.value).replace(",", "."));
+  const key = k + "|" + getLato();
+  if (v > 0) custom.cm[key] = v; else delete custom.cm[key];
+  saveForm(); renderPoints(); renderLive();
+});
+
+function selZona() {
+  const g = currentGroup();
+  if (!g || !selPunto) return null;
+  const p = g.punti.find(p => p[0] === selPunto);
+  if (!p) return null;
+  const tg = $("taglia").value, lato = getLato(), zr = zonaRange(p[0], lato);
+  return { k: p[0], nome: p[1], lato, zr, range: zr.range, atteso: atteso($("articolo").value.trim(), tg, p[0]) };
+}
+
+// Riga già registrata per questo capo, zona e lato (una registrazione nuova la sostituisce).
+function rigaDi(nome, lato) {
+  const art = $("articolo").value.trim(), tg = $("taglia").value, ord = $("ordine").value.trim(), col = $("colore").value.trim();
+  return rows.findIndex(r => r.articolo === art && r.taglia === tg && r.ordine === ord && r.colore === col && r.punto === nome && r.lato === lato);
+}
+
+function renderZoneHead() {
+  const z = selZona(), h = $("zoneHead");
+  if (!z) { h.innerHTML = esc(tr("Seleziona prima la zona da misurare.")); return; }
+  h.innerHTML = `${tr("Zona")}: <b>${esc(tr(z.nome))}${z.lato ? " " + tr(z.lato) : ""}</b>` +
+    (z.range ? ` · ${rangeLabel(z.zr)} · <span class="mid-hint" style="display:inline">${tr("prova a {0} cm", fmtN(z.zr.mid))}</span>` :
+      z.zr.custom ? ` · <span style="color:var(--ko)">${tr("circonferenza custom da inserire")}</span>` : "") +
+    (z.atteso ? ` · ${tr("atteso {0} mmHg", fmtAtt(z.atteso[0], z.atteso[1]))}` : "");
+}
+
+function renderPoints() {
+  const g = currentGroup(), box = $("points");
+  $("sideBox").hidden = !(g && g.lati);
+  if (!g) { box.innerHTML = `<span class="empty">${esc(tr("Inserisci l'articolo per vedere le zone di misura."))}</span>`; selPunto = null; renderZoneHead(); renderCharts(); return; }
+  if (selPunto && !g.punti.some(p => p[0] === selPunto)) selPunto = null;
+  const art = $("articolo").value.trim(), tg = $("taglia").value, lato = getLato();
+  box.innerHTML = g.punti.map(([k, n]) => {
+    const a = atteso(art, tg, k), zr = zonaRange(k, lato), i = rigaDi(n, lato);
+    return `<button data-p="${k}" class="${i >= 0 ? "done" : ""}${k === selPunto ? " sel" : ""}">${tr(n)}` +
+      (zr.range ? `<small>${rangeLabel(zr)}</small><span class="mid-hint">${tr("prova a {0} cm", fmtN(zr.mid))}</span>` :
+        zr.custom ? `<span class="need">${tr("circonferenza custom da inserire")}</span>` : "") +
+      `<small>${a ? tr("atteso {0} mmHg", fmtAtt(a[0], a[1])) : tr("atteso mmHg: –")}</small>` +
+      (i >= 0 ? `<span class="rec-val">✓ ${fmt(rows[i].mmhg)} mmHg · ${fmt(rows[i].circ)} cm</span>` : "") + `</button>`;
+  }).join("");
+  renderZoneHead();
+  renderCharts();
+}
+
+$("points").addEventListener("click", e => {
+  const b = e.target.closest("button[data-p]");
+  if (!b) return;
+  selPunto = b.dataset.p;
+  renderPoints(); renderLive();
+});
+$("sideBox").addEventListener("change", () => { renderCustomBox(); renderPoints(); renderLive(); });
+
+function registra() {
+  const z = selZona();
+  if (!z || !isFresh()) return;
+  const row = {
+    rmin: z.range ? z.range[0] : null, rmax: z.range ? z.range[1] : null,
+    custom: z.zr.custom, target: z.zr.mid,
+    ora: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    articolo: $("articolo").value.trim(), taglia: $("taglia").value, colore: $("colore").value.trim(), ordine: $("ordine").value.trim(),
+    punto: z.nome, lato: z.lato,
+    circ: live.circMm == null ? null : Math.round(live.circMm) / 10, mmhg: live.mmhg,
+    min: z.atteso ? z.atteso[0] : null, max: z.atteso ? z.atteso[1] : null,
+    classe: classeDi($("articolo").value) || ""
+  };
+  const i = rigaDi(z.nome, z.lato);
+  if (i >= 0) rows[i] = row; else rows.push(row);
+  // Passa alla prossima zona non ancora misurata.
+  const g = currentGroup(), next = g.punti.find(p => rigaDi(p[1], z.lato) < 0);
+  selPunto = next ? next[0] : null; // tutte misurate: nessuna zona selezionata
+  saveRows(); renderRows(); renderPoints(); renderLive();
+}
+$("btnRec").onclick = registra;
+document.addEventListener("keydown", e => {
+  if (e.code !== "Space" || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if (e.target.tagName === "BUTTON" && !e.target.closest("#points")) return;
+  e.preventDefault();
+  registra();
+});
+
+// ---------------- Grafico (gamba o braccio con i punti di misura) ------------
+const FIGURE = {
+  gamba: {
+    w: 490, h: 530, labelX: 230,
+    sagoma: `<path d="M80,40 L180,40 C188,70 198,90 197,112 C196,150 186,175 180,195 C172,240 158,270 152,295 C150,312 152,322 156,340 C162,365 160,395 148,430 C142,450 138,462 137,478 C140,492 168,496 178,505 C182,512 176,516 165,516 L108,516 C100,516 98,508 100,498 C101,485 100,470 99,455 C92,420 82,395 84,365 C86,340 90,322 89,300 C86,270 72,235 68,195 C64,160 60,130 63,112 C66,90 75,70 80,40 Z"/>
+      <path d="M104,300 C112,308 128,308 138,300" fill="none"/>`,
+    // punto: [y, x sinistra, x destra]
+    punti: { D: [48, 79, 182], C: [112, 63, 197], B: [200, 69, 178], cD: [318, 90, 153], A: [365, 84, 160], cC: [365, 84, 160], E: [470, 99, 138], cB: [470, 99, 138] }
+  },
+  braccio: {
+    w: 540, h: 360, labelX: 280,
+    sagoma: `<path d="M120,50 C150,40 220,40 250,50 C262,90 258,140 252,200 C250,250 255,300 258,335 L122,335 C125,300 128,250 126,200 C124,150 122,100 120,50 Z"/>
+      <path d="M120,50 C98,55 86,75 84,110 L78,215 L74,330 C80,340 100,340 106,330 L112,215 L122,120 Z"/>
+      <path d="M160,42 C175,58 195,58 210,42" fill="none"/>`,
+    punti: { AS: [112, 84, 121], BU: [140, 124, 256], GO: [215, 78, 112] }
+  }
+};
+// Colori degli esiti: linee e pallini (tolleranza = giallo pieno) e testo (giallo più scuro, leggibile su bianco).
+const COLORE_ESITO = { ok: "#1f8a4c", tol: "#f2c500", ko: "#c62f2f", na: "#6b7385" };
+const COLORE_TESTO = { ok: "#1f8a4c", tol: "#c9a400", ko: "#c62f2f", na: "#6b7385" };
+
+// Testo del range per il grafico: custom (dalle righe o dai valori inseriti) oppure range della taglia.
+function testoRange(k, art, tg, rr, isCur) {
+  let cust = rr.filter(r => r.custom && r.target != null).map(r => [r.lato, r.target]);
+  if (!cust.length && isCur && custom.on) cust = ["dx", "sx", ""].map(l => [l, custom.cm[k + "|" + l]]).filter(x => x[1] > 0);
+  if (cust.length) return "custom " + cust.map(([l, v]) => (l ? tr(l) + " " : "") + fmtN(v)).join(" · ") + " cm";
+  if (isCur && custom.on) return tr("circonferenza custom da inserire");
+  const r = rangeCm(tg, k, art);
+  return r ? tr("range {0} · medio {1}", fmtN(r[0]) + "–" + fmtN(r[1]) + " cm", fmtN((r[0] + r[1]) / 2)) : null;
+}
+
+function svgFigura(art, tg, righe, attivo, isCur) {
+  const gk = trovaGruppo(codiceBase(art));
+  const g = GRUPPI[gk];
+  if (!g) return "";
+  const fig = FIGURE[gk === "bolero" || gk === "maglie" ? "braccio" : "gamba"];
+
+  // Etichette ordinate dall'alto, distanziate per non sovrapporsi.
+  const lbl = g.punti.filter(([k]) => fig.punti[k]).map(([k, nome]) => {
+    const rr = righe.filter(r => r.punto === nome);
+    const range = testoRange(k, art, tg, rr, isCur);
+    return { k, nome, y: fig.punti[k][0], rr, range, h: 22 + 17 * Math.max(1, rr.length) + (range ? 16 : 0) };
+  }).sort((a, b) => a.y - b.y);
+  // Gambaletto: si mostra solo la parte bassa della gamba.
+  const y0 = gk === "gambaletto" ? 270 : 0;
+  let fondo = y0 + 6;
+  lbl.forEach(l => { l.top = Math.max(l.y - l.h / 2, fondo); fondo = l.top + l.h + 6; });
+  const over = fondo - fig.h;
+  if (over > 0) for (let i = lbl.length - 1, limite = fig.h; i >= 0; i--) { lbl[i].top = Math.min(lbl[i].top, limite - lbl[i].h - 6); limite = lbl[i].top; }
+
+  const PX = 175; // spazio a sinistra per il profilo di compressione
+  let s = `<svg viewBox="0 ${y0} ${fig.w + PX} ${Math.max(fig.h, fondo) - y0}" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, sans-serif">
+    ${svgProfilo(art, tg, righe, lbl, fig, PX)}
+    <g transform="translate(${PX},0)">
+    <g fill="#f3e6d8" stroke="#8a7a6a" stroke-width="2" stroke-linejoin="round">${fig.sagoma}</g>`;
+  lbl.forEach(l => {
+    const [y, x1, x2] = fig.punti[l.k];
+    const peggiore = l.rr.map(r => esito(r).cls).sort((a, b) => ["ko", "tol", "ok", "na"].indexOf(a) - ["ko", "tol", "ok", "na"].indexOf(b))[0];
+    const col = l.rr.length ? COLORE_ESITO[peggiore] : "#9aa1ad";
+    const sel = l.k === attivo;
+    const ly = l.top + l.h / 2;
+    s += `<g class="zona" data-p="${l.k}">
+      ${sel ? `<path class="sel-halo" d="M${x1},${y} Q${(x1 + x2) / 2},${y + 9} ${x2},${y}" fill="none" stroke="#e8703a" stroke-opacity=".35" stroke-width="12" stroke-linecap="round"/>` : ""}
+      <path d="M${x1},${y} Q${(x1 + x2) / 2},${y + 9} ${x2},${y}" fill="none" stroke="${col}" stroke-width="3.5" stroke-linecap="round"/>
+      <polyline points="${x2 + 4},${y} ${fig.labelX - 14},${y} ${fig.labelX - 4},${ly}" fill="none" stroke="${col}" stroke-width="1.2" stroke-dasharray="${l.rr.length ? "" : "3 3"}"/>
+      ${sel ? `<rect class="sel-halo" x="${fig.labelX - 3}" y="${l.top - 3}" width="${fig.w - fig.labelX + 2}" height="${l.h + 6}" rx="8" fill="none" stroke="#e8703a" stroke-opacity=".45" stroke-width="4"/>` : ""}
+      <rect x="${fig.labelX}" y="${l.top}" width="${fig.w - fig.labelX - 4}" height="${l.h}" rx="6" fill="#fff" stroke="${col}" stroke-width="1.5"/>
+      <text x="${fig.labelX + 9}" y="${l.top + 17}" font-size="14" font-weight="700" fill="#1d2433">${esc(tr(l.nome))}</text>`;
+    let ty = l.top + 17;
+    if (l.range) { ty += 16; s += `<text x="${fig.labelX + 9}" y="${ty}" font-size="11.5" fill="#6b7385">${esc(l.range)}</text>`; }
+    if (!l.rr.length) { ty += 17; s += `<text x="${fig.labelX + 9}" y="${ty}" font-size="13" fill="#9aa1ad">${tr("da misurare")}</text>`; }
+    l.rr.forEach(r => {
+      const e = esito(r);
+      ty += 17;
+      s += `<text x="${fig.labelX + 9}" y="${ty}" font-size="13" fill="#1d2433">${r.lato ? `<tspan font-weight="600">${esc(tr(r.lato))}</tspan>  ` : ""}<tspan font-weight="700" fill="${COLORE_TESTO[e.cls]}">${fmt(r.mmhg)} mmHg</tspan>  ${circErr(r.circ, rowMid(r)) ? `<tspan fill="#c62f2f" font-weight="700">⚠ ${fmt(r.circ)} cm</tspan>` : fmt(r.circ) + " cm"}  <tspan font-weight="700" fill="${COLORE_TESTO[e.cls]}">${tr(e.txt)}</tspan></text>`;
+    });
+    s += `</g>`;
+  });
+  return s + `</g></svg>`;
+}
+
+// Profilo della compressione: mmHg (orizzontale) alla stessa altezza delle zone del disegno.
+function svgProfilo(art, tg, righe, lbl, fig, PX) {
+  const kl = classeDi(art), cls = kl ? CLASSI_MMHG[kl] : null;
+  const vals = righe.map(r => r.mmhg).filter(v => v != null);
+  if (!cls && !vals.length) return "";
+  const ys = lbl.map(l => l.y), yTop = Math.min(...ys) - 18, yBot = Math.max(...ys) + 18;
+  // Range atteso per zona (vita e fianchi hanno il minimo ridotto).
+  const att = lbl.map(l => atteso(art, tg, l.k)).filter(Boolean);
+  let lo = cls ? cls[0] - 4 : Math.min(...vals) - 3, hi = cls ? cls[1] + 4 : Math.max(...vals) + 3;
+  if (vals.length) { lo = Math.min(lo, Math.floor(Math.min(...vals)) - 1); hi = Math.max(hi, Math.ceil(Math.max(...vals)) + 1); }
+  const xL = 26, xR = PX - 22, X = v => xL + (v - lo) / (hi - lo) * (xR - xL);
+  let s = `<text x="${(xL + xR) / 2}" y="${yTop - 10}" font-size="11.5" font-weight="700" fill="#1d2433" text-anchor="middle">${tr("Compressione (mmHg)")}</text>`;
+  if (cls) {
+    // Fascia verde (range) e gialla (tolleranza) zona per zona, ognuna fino a metà strada dalla zona vicina.
+    const zs = lbl.slice().sort((a, b) => a.y - b.y);
+    zs.forEach((l, i) => {
+      const a = atteso(art, tg, l.k);
+      if (!a) return;
+      const y1 = i ? (zs[i - 1].y + l.y) / 2 : yTop, y2 = i < zs.length - 1 ? (l.y + zs[i + 1].y) / 2 : yBot;
+      const a0 = a[0] > 0 ? a[0] : lo, t0 = a[0] > 0 ? a[0] - TOLLERANZA_MMHG : lo;
+      s += `<rect x="${X(t0)}" y="${y1}" width="${X(a[1] + TOLLERANZA_MMHG) - X(t0)}" height="${y2 - y1}" fill="#fff1b8"/>
+        <rect x="${X(a0)}" y="${y1}" width="${X(a[1]) - X(a0)}" height="${y2 - y1}" fill="#dff2e6"/>`;
+    });
+  }
+  s += `<rect x="${xL}" y="${yTop}" width="${xR - xL}" height="${yBot - yTop}" fill="none" stroke="#c9ced8"/>`;
+  // Linee guida all'altezza di ogni zona.
+  lbl.forEach(l => { s += `<line x1="${xL}" x2="${PX + fig.punti[l.k][1] - 6}" y1="${l.y}" y2="${l.y}" stroke="#d5d9e0" stroke-dasharray="2 3"/>`; });
+  // Scala in basso.
+  const ticks = cls ? [...new Set([lo, cls[0], cls[1], hi])].sort((a, b) => a - b) : [lo, Math.round((lo + hi) / 2), hi];
+  ticks.forEach(v => { s += `<line x1="${X(v)}" x2="${X(v)}" y1="${yBot}" y2="${yBot + 4}" stroke="#8a90a0"/><text x="${X(v)}" y="${yBot + 15}" font-size="10.5" fill="#6b7385" text-anchor="middle">${fmtN(v)}</text>`; });
+  // Una linea per lato (dx continua, sx tratteggiata), dal basso verso l'alto.
+  const lati = [...new Set(righe.map(r => r.lato))];
+  lati.forEach(lato => {
+    const pts = lbl.map(l => ({ y: l.y, r: l.rr.find(r => r.lato === lato) })).filter(p => p.r && p.r.mmhg != null).sort((a, b) => b.y - a.y);
+    if (pts.length > 1) s += `<polyline points="${pts.map(p => X(p.r.mmhg) + "," + p.y).join(" ")}" fill="none" stroke="#3b4a6b" stroke-width="2" stroke-dasharray="${lato === "sx" ? "5 4" : ""}" stroke-linejoin="round"/>`;
+    pts.forEach(p => { s += `<circle cx="${X(p.r.mmhg)}" cy="${p.y}" r="4.5" fill="${COLORE_ESITO[esito(p.r).cls]}" stroke="${esito(p.r).cls === "tol" ? "#8a7000" : "#fff"}" stroke-width="1.5"/>`; });
+  });
+  if (lati.length > 1 || (lati[0] && lati[0] !== "")) {
+    const leg = lati.filter(l => l).map((l, i) => `<line x1="${xL + i * 60}" x2="${xL + i * 60 + 18}" y1="${yBot + 30}" y2="${yBot + 30}" stroke="#3b4a6b" stroke-width="2" stroke-dasharray="${l === "sx" ? "5 4" : ""}"/><text x="${xL + i * 60 + 22}" y="${yBot + 34}" font-size="11" fill="#1d2433">${esc(tr(l))}</text>`).join("");
+    s += leg;
+  }
+  return s;
+}
+
+function renderCharts() {
+  const box = $("charts");
+  // Un grafico per ogni capo in tabella; se il capo in prova non ha ancora misure, lo mostra vuoto.
+  const capi = new Map();
+  const chiave = r => [r.articolo, r.taglia, r.colore, r.ordine].join("|");
+  const cur = { articolo: $("articolo").value.trim(), taglia: $("taglia").value, colore: $("colore").value.trim(), ordine: $("ordine").value.trim() };
+  if (currentGroup()) capi.set(chiave(cur), { ...cur, righe: [] });
+  rows.forEach(r => { const k = chiave(r); if (!capi.has(k)) capi.set(k, { ...r, righe: [] }); capi.get(k).righe.push(r); });
+  const curKey = chiave(cur);
+  const html = [...capi.entries()].map(([k, c]) => {
+    const kl = classeDi(c.articolo);
+    const isCur = k === curKey;
+    const fig = svgFigura(c.articolo, c.taglia, c.righe, isCur ? selPunto : null, isCur);
+    if (!fig) return "";
+    const cust = c.righe.some(r => r.custom) || (isCur && custom.on);
+    return `<div class="chart${c.righe.length ? "" : " no-print"}" data-cur="${isCur ? 1 : 0}"><div class="chart-title">${esc(c.articolo)} · ${esc(c.taglia)}${cust ? " · custom" : ""}` +
+      `<span>${c.colore ? " · " + esc(c.colore) : ""}${c.ordine ? " · " + esc(c.ordine) : ""}${kl ? ` · ${kl} ${CLASSI_MMHG[kl][0]}–${CLASSI_MMHG[kl][1]} mmHg` : ""}</span></div>${fig}</div>`;
+  }).join("");
+  box.innerHTML = html || `<span class="empty">${esc(tr("Inserisci l'articolo per vedere il grafico."))}</span>`;
+  $("chartCard").classList.toggle("no-print", !rows.length);
+}
+// Click su una zona del grafico del capo in prova = seleziona la zona.
+$("charts").addEventListener("click", e => {
+  const z = e.target.closest(".zona"), c = e.target.closest(".chart");
+  if (!z || !c || c.dataset.cur !== "1") return;
+  selPunto = z.dataset.p;
+  renderPoints(); renderLive();
+});
+
+// ---------------- Tabella ----------------------------------------------------
+let rows = [];
+// Circonferenza rilevata diversa di oltre 1 cm da quella indicata (valore medio o custom).
+const CIRC_TOL_CM = 1;
+function circDiff(circ, mid) { return circ == null || mid == null ? null : circ - mid; }
+function circErr(circ, mid) { const d = circDiff(circ, mid); return d != null && Math.abs(d) > CIRC_TOL_CM + 1e-9; }
+function circCsv(r) {
+  const d = circDiff(r.circ, rowMid(r));
+  if (d == null) return "";
+  return circErr(r.circ, rowMid(r)) ? tr("diversa di {0} cm", (d > 0 ? "+" : "−") + fmtN(Math.abs(d))) : "OK";
+}
+
+// Range della riga registrata: della taglia, oppure custom (valore inserito).
+function rowMid(r) { return r.rmin == null ? null : r.custom ? r.target : (r.rmin + r.rmax) / 2; }
+function rowRange(r) { return r.rmin == null ? "–" : r.custom ? "custom " + fmtN(r.target) : fmtN(r.rmin) + "–" + fmtN(r.rmax); }
+
+// Tolleranza in mmHg oltre il range della classe: esito OK in giallo.
+const TOLLERANZA_MMHG = 2;
+function esito(r) {
+  if (r.min == null) return { cls: "na", txt: "–", csv: "–" };
+  if (r.mmhg >= r.min && r.mmhg <= r.max) return { cls: "ok", txt: "OK", csv: "OK" };
+  if (r.mmhg >= r.min - TOLLERANZA_MMHG && r.mmhg <= r.max + TOLLERANZA_MMHG) return { cls: "tol", txt: "OK", csv: "OK (tolleranza)" };
+  if (r.mmhg < r.min) return { cls: "ko", txt: "BASSO", csv: "BASSO" };
+  return { cls: "ko", txt: "ALTO", csv: "ALTO" };
+}
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function renderRows() {
+  const tb = $("rows");
+  if (!rows.length) { tb.innerHTML = `<tr><td colspan="14" class="empty">${tr("Nessuna misura registrata.")}</td></tr>`; return; }
+  tb.innerHTML = rows.map((r, i) => {
+    const e = esito(r);
+    return `<tr><td>${i + 1}</td><td>${esc(r.ora)}</td><td>${esc(r.articolo)}</td><td>${esc(r.taglia)}</td><td>${esc(r.colore)}</td><td>${esc(r.ordine)}</td>
+      <td>${esc(tr(r.punto))}</td><td>${esc(r.lato ? tr(r.lato) : "")}</td>
+      <td class="num">${rowRange(r)}${r.rmin == null || r.custom ? "" : ` <span class="muted">(${tr("medio {0}", fmtN(rowMid(r)))})</span>`}</td>
+      <td class="num${circErr(r.circ, rowMid(r)) ? " out" : ""}">${circErr(r.circ, rowMid(r)) ? "⚠ " : ""}${fmt(r.circ)}</td><td class="num"><b>${fmt(r.mmhg)}</b></td>
+      <td class="num">${r.min == null ? "–" : fmtAtt(r.min, r.max) + (r.classe ? ` <span class="muted">(${esc(r.classe)})</span>` : "")}</td><td><span class="esito ${e.cls}">${tr(e.txt)}</span></td>
+      <td><button class="del" data-i="${i}" title="${tr("Elimina riga")}">✕</button></td></tr>`;
+  }).join("");
+}
+$("rows").addEventListener("click", e => {
+  const b = e.target.closest(".del");
+  if (!b) return;
+  rows.splice(+b.dataset.i, 1);
+  saveRows(); renderRows(); renderPoints();
+});
+
+$("btnClear").onclick = () => {
+  if (rows.length && confirm(tr("Svuotare la tabella delle misure registrate?"))) { rows = []; saveRows(); renderRows(); renderPoints(); }
+};
+
+$("btnCsv").onclick = () => {
+  // Italiano: separatore ";" e virgola decimale (Excel italiano); inglese: "," e punto.
+  const sep = LANG === "en" ? "," : ";";
+  const head = ["#", "Data", "Ora", "Operatore", "Articolo", "Taglia", "Colore", "Ordine / lotto", "Punto", "Lato", "Tipo range", "Range taglia min (cm)", "Range taglia max (cm)", "Valore medio (cm)", "Circonferenza (cm)", "Compressione (mmHg)", "Classe", "Atteso min", "Atteso max", "Controllo circonferenza", "Esito"].map(h => tr(h));
+  const num = n => n == null ? "" : dec(String(n));
+  const q = s => /[;,"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  const lines = [head.join(sep)].concat(rows.map((r, i) => [i + 1, $("data").value, r.ora, $("operatore").value, r.articolo, r.taglia, r.colore, r.ordine, tr(r.punto), r.lato ? tr(r.lato) : "",
+    r.rmin == null ? "" : r.custom ? "custom" : tr("taglia"),
+    num(r.custom ? null : r.rmin), num(r.custom ? null : r.rmax), num(rowMid(r)), num(r.circ), num(r.mmhg), r.classe || "", num(r.min > 0 ? r.min : null), num(r.max), circCsv(r), tr(esito(r).csv)].map(v => q(String(v))).join(sep)));
+  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${tr("Prova compressione")} ${$("data").value}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+// Dati numerici per la stampa: una tabella compatta per ogni capo, zone in ordine dal basso.
+function renderPrint() {
+  const d = $("data").value.split("-").reverse().join("/");
+  let h = `<div class="pd-head"><h1>${tr("Prova compressione")}</h1><div>${tr("Data")}: ${esc(d)}<br>${tr("Operatore")}: ${esc($("operatore").value)}</div></div>`;
+  const capi = new Map();
+  rows.forEach(r => { const k = [r.articolo, r.taglia, r.colore, r.ordine].join("|"); if (!capi.has(k)) capi.set(k, []); capi.get(k).push(r); });
+  capi.forEach(rr => {
+    const c = rr[0], g = GRUPPI[trovaGruppo(codiceBase(c.articolo))];
+    const ordine = g ? g.punti.map(p => p[1]) : [];
+    rr = rr.slice().sort((a, b) => (ordine.indexOf(a.punto) - ordine.indexOf(b.punto)) || a.lato.localeCompare(b.lato));
+    const n = { ok: 0, tol: 0, ko: 0 };
+    rr.forEach(r => { const e = esito(r).cls; if (n[e] != null) n[e]++; });
+    h += `<div class="pd-capo"><div class="pd-title">${esc(c.articolo)} · ${esc(c.taglia)}<span>` +
+      `${c.colore ? " · " + esc(c.colore) : ""}${c.ordine ? " · " + tr("Ordine / lotto") + " " + esc(c.ordine) : ""}` +
+      `${c.classe ? " · " + tr("classe {0}", c.classe) + (CLASSI_MMHG[c.classe] ? ` (${CLASSI_MMHG[c.classe][0]}–${CLASSI_MMHG[c.classe][1]} mmHg)` : "") : ""}</span></div>` +
+      `<div class="pd-sum">${tr("Misure: {0}", rr.length)} · OK ${n.ok} · ${tr("OK in tolleranza: {0}", n.tol)} · ${tr("BASSO / ALTO: {0}", n.ko)}</div>` +
+      `<table><thead><tr><th>${tr("Punto")}</th><th>${tr("Lato")}</th><th class="num">${tr("Range taglia (cm)")}</th><th class="num">${tr("Medio (cm)")}</th>` +
+      `<th class="num">${tr("Circ. (cm)")}</th><th class="num">mmHg</th><th class="num">${tr("Atteso (mmHg)")}</th><th>${tr("Esito")}</th><th>${tr("Ora")}</th></tr></thead><tbody>` +
+      rr.map(r => {
+        const e = esito(r), out = circErr(r.circ, rowMid(r));
+        return `<tr><td><b>${esc(tr(r.punto))}</b></td><td>${r.lato ? esc(tr(r.lato)) : "–"}</td>` +
+          `<td class="num">${rowRange(r)}</td><td class="num">${fmtN(rowMid(r))}</td>` +
+          `<td class="num${out ? " out" : ""}">${out ? "⚠ " : ""}${fmt(r.circ)}</td><td class="num"><b>${fmt(r.mmhg)}</b></td>` +
+          `<td class="num">${r.min == null ? "–" : fmtAtt(r.min, r.max)}</td><td><span class="esito ${e.cls}">${tr(e.txt)}</span></td><td>${esc(r.ora)}</td></tr>`;
+      }).join("") + `</tbody></table></div>`;
+  });
+  $("printData").innerHTML = h;
+
+  let f = `<div class="pf-box"><div class="pf-left"><div class="pf-h">${tr("Risultato finale")}</div>`;
+  capi.forEach(rr => {
+    const c = rr[0], g = GRUPPI[trovaGruppo(codiceBase(c.articolo))];
+    const ko = rr.filter(r => esito(r).cls === "ko");
+    const mancanti = g ? g.punti.map(p => p[1]).filter(n => !rr.some(r => r.punto === n)) : [];
+    const note = [];
+    if (ko.length) note.push(tr("Parametri non conformi: {0}", ko.map(r => tr(r.punto) + (r.lato ? " " + tr(r.lato) : "") + " " + tr(esito(r).txt)).join(", ")));
+    if (mancanti.length) note.push(tr("Zone non misurate: {0}", mancanti.map(n => tr(n)).join(", ")));
+    f += `<div class="pf-capo"><div><div class="nm">${esc(c.articolo)} · ${esc(c.taglia)}${c.colore ? " · " + esc(c.colore) : ""}${c.ordine ? " · " + esc(c.ordine) : ""}</div>` +
+      (note.length ? `<div class="nt">${esc(note.join(" · "))}</div>` : "") + `</div>` +
+      `<span class="verdetto ${ko.length ? "ko" : "ok"}">${tr(ko.length ? "NON APPROVATO" : "APPROVATO")}</span></div>`;
+  });
+  f += `</div><div class="pf-right"><div class="pf-h">${tr("Firma operatore")}</div><div class="pf-firma"></div>` +
+    `<div class="pf-sub">${esc($("operatore").value)} · ${esc(d)}</div></div></div>`;
+  $("printFinal").innerHTML = rows.length ? f : "";
+}
+// Grafici in stampa: ognuno il più grande possibile (larghezza pagina meno 5 mm per lato).
+// Se nello spazio libero della pagina non entra a piena grandezza viene ridotto per riempirlo;
+// se lo spazio libero è troppo poco passa alla pagina successiva.
+const MM = 96 / 25.4, PAGINA_W = 186, PAGINA_H = 273, MARGINE_GRAFICO = 5, ALTEZZA_MIN_GRAFICO = 80;
+function layoutPrintCharts() {
+  document.body.classList.add("print-measure");
+  const usatoMm = $("printData").offsetHeight / MM, finaleMm = $("printFinal").offsetHeight / MM + 6;
+  document.body.classList.remove("print-measure");
+  const charts = [...document.querySelectorAll("#charts .chart:not(.no-print)")];
+  const TITOLO = 8, SPAZIO = 5, SICUREZZA = 5, maxW = PAGINA_W - 2 * MARGINE_GRAFICO;
+  $("chartCard").style.breakBefore = "";
+  let libero = PAGINA_H - usatoMm - 6 - 10; // spazio sotto i dati, meno il titolo "Grafico"
+  charts.forEach((c, i) => {
+    const svg = c.querySelector("svg"), vb = svg.viewBox.baseVal, rapporto = vb.width / vb.height;
+    const hPiena = maxW / rapporto;
+    let disp = libero - TITOLO - SICUREZZA;
+    c.style.breakBefore = "";
+    if (disp < Math.min(hPiena, ALTEZZA_MIN_GRAFICO)) {
+      if (i === 0) $("chartCard").style.breakBefore = "page"; else c.style.breakBefore = "page";
+      libero = PAGINA_H - (i === 0 ? 10 : 0);
+      disp = libero - TITOLO - SICUREZZA;
+    }
+    // Ultimo grafico: se possibile lascia spazio al risultato finale sulla stessa pagina.
+    if (i === charts.length - 1 && disp - finaleMm >= ALTEZZA_MIN_GRAFICO) disp -= finaleMm;
+    const h = Math.min(hPiena, disp);
+    svg.style.width = (h * rapporto) + "mm";
+    libero -= h + TITOLO + SPAZIO;
+  });
+}
+function resetPrintCharts() {
+  $("chartCard").style.breakBefore = "";
+  document.querySelectorAll("#charts .chart").forEach(c => { c.style.breakBefore = ""; const svg = c.querySelector("svg"); if (svg) svg.style.width = ""; });
+}
+function preparaStampa() { renderPrint(); layoutPrintCharts(); }
+$("btnPrint").onclick = () => { preparaStampa(); window.print(); };
+window.addEventListener("beforeprint", preparaStampa);
+window.addEventListener("afterprint", resetPrintCharts);
+
+// ---------------- Salvataggio locale (resta dopo un aggiornamento pagina) ----
+function saveRows() { try { localStorage.setItem("pc_rows", JSON.stringify(rows)); } catch (e) {} }
+function saveForm() {
+  try { localStorage.setItem("pc_form", JSON.stringify({ articolo: $("articolo").value, taglia: $("taglia").value, colore: $("colore").value, ordine: $("ordine").value, operatore: $("operatore").value, custom })); } catch (e) {}
+}
+function load() {
+  try { rows = JSON.parse(localStorage.getItem("pc_rows") || "[]"); } catch (e) { rows = []; }
+  rows.forEach(r => {
+    const g = GRUPPI[trovaGruppo(codiceBase(r.articolo))], p = g && g.punti.find(p => p[1] === r.punto);
+    const a = p && atteso(r.articolo, r.taglia, p[0]);
+    if (a) { r.min = a[0]; r.max = a[1]; }
+  });
+  try {
+    const f = JSON.parse(localStorage.getItem("pc_form") || "{}");
+    ["articolo", "colore", "ordine", "operatore"].forEach(k => { if (f[k] != null) $(k).value = f[k]; });
+    if (f.custom && f.custom.cm) custom = { on: !!f.custom.on, cm: f.custom.cm };
+    onArticolo();
+    if (f.taglia) $("taglia").value = f.taglia;
+  } catch (e) { onArticolo(); }
+}
+
+// ---------------- Avvio ------------------------------------------------------
+$("articoli").innerHTML = Object.values(GRUPPI).flatMap(g => g.articoli).map(a => `<option value="${a}">`).join("");
+$("data").value = new Date().toISOString().slice(0, 10);
+$("articolo").addEventListener("input", onArticolo);
+$("taglia").addEventListener("change", () => { saveForm(); renderPoints(); });
+["colore", "ordine", "operatore"].forEach(k => $(k).addEventListener("input", () => { saveForm(); renderPoints(); }));
+$("btnConnect").onclick = () => port ? disconnect() : connect();
+
+// Cambio lingua: aggiorna testi fissi e parti calcolate.
+function applyLang() {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    if (el.dataset.it == null) el.dataset.it = el.textContent.trim();
+    el.textContent = tr(el.dataset.it);
+  });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => {
+    if (el.dataset.it == null) el.dataset.it = el.innerHTML.trim();
+    el.innerHTML = tr(el.dataset.it);
+  });
+  document.title = tr("Prova Compressione");
+  $("articolo").placeholder = tr("es. HUPLA6");
+  $("btnConnect").textContent = tr(demo ? (port ? "Simulazione" : "Avvia simulazione") : (port ? "Scollega" : "Collega misuratore"));
+  $("statusText").textContent = tr(...statusTxt);
+  document.querySelectorAll("#langBox button").forEach(b => b.classList.toggle("on", b.dataset.lang === LANG));
+}
+$("langBox").addEventListener("click", e => {
+  const b = e.target.closest("button[data-lang]");
+  if (!b || b.dataset.lang === LANG) return;
+  LANG = b.dataset.lang;
+  try { localStorage.setItem("pc_lang", LANG); } catch (e) {}
+  applyLang(); onArticolo(); renderRows(); renderLive();
+});
+
+if (!("serial" in navigator)) { $("noSerial").hidden = false; $("btnConnect").disabled = true; }
+
+// Modalità prova senza misuratore: aprire il file con ?demo alla fine dell'indirizzo.
+const demo = location.search.includes("demo");
+if (demo) {
+  $("btnConnect").disabled = false;
+  $("btnConnect").onclick = () => {
+    port = { demo: true };
+    $("btnConnect").textContent = tr("Simulazione");
+    setStatus("wait", "Simulazione");
+    let v = 10.5;
+    setInterval(() => { onLine("CIRC. [mm]: 388.3"); onLine("COMP. [mmHg]: " + (v = Math.max(9.5, v - 0.02)).toFixed(1)); }, 400);
+  };
+}
+
+applyLang();
+load();
+renderRows();
+renderLive();
+</script>
+</body>
+</html>
