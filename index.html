@@ -90,6 +90,16 @@
   .lang button.on { background: var(--ink); color: #fff; }
   /* Stampa (A4 verticale): prima i dati numerici, poi i grafici affiancati. */
   #printData, #printFinal { display: none; }
+  #pdfHolder { position: absolute; left: -10000px; top: 0; }
+  #pdfRoot { width: 182mm; background: #fff; color: #1d2433; font-size: 10.5pt; }
+  #pdfRoot .pd-capo table { font-size: 9pt; }
+  #pdfRoot .pd-capo th { white-space: normal; }
+  #pdfRoot .chart img { display: block; margin: 0 auto; }
+  #pdfRoot .pdf-graf h2 { margin: 6mm 0 3mm; font-size: 10pt; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  #pdfRoot .chart { max-width: none; margin-bottom: 5mm; }
+  #pdfRoot .chart svg { margin: 0 auto; }
+  #pdfRoot .chart-title { font-size: 9pt; }
+  #pdfRoot .chart-title span { font-size: 8pt; }
   @page { size: A4 portrait; margin: 12mm; }
   @media print {
     header, .no-print, .del, .screen-only { display: none !important; }
@@ -214,6 +224,7 @@
     <div class="actions no-print">
       <button id="btnCsv" data-i18n>Esporta Excel (CSV)</button>
       <button id="btnPrint" data-i18n>Stampa / PDF</button>
+      <button id="btnPdf" data-i18n>Salva PDF</button>
       <button id="btnClear" data-i18n>Svuota tabella</button>
     </div>
   </section>
@@ -300,6 +311,10 @@ const EN = {
   "Tipo range": "Range type",
   "taglia": "size",
   "Medio (cm)": "Mid (cm)",
+  "Salva PDF": "Save PDF",
+  "Creo il PDF…": "Creating PDF…",
+  "n. {0}": "no. {0}",
+  "Impossibile caricare il generatore PDF: controlla la connessione a internet.": "Could not load the PDF generator: check the internet connection.",
   "Risultato finale": "Final result",
   "APPROVATO": "APPROVED",
   "NON APPROVATO": "NOT APPROVED",
@@ -934,9 +949,9 @@ $("btnCsv").onclick = () => {
 };
 
 // Dati numerici per la stampa: una tabella compatta per ogni capo, zone in ordine dal basso.
-function renderPrint() {
+function renderPrint(num) {
   const d = $("data").value.split("-").reverse().join("/");
-  let h = `<div class="pd-head"><h1>${tr("Prova compressione")}</h1><div>${tr("Data")}: ${esc(d)}<br>${tr("Operatore")}: ${esc($("operatore").value)}</div></div>`;
+  let h = `<div class="pd-head"><h1>${tr("Prova compressione")}${num ? ` <span style="font-weight:400;color:var(--muted)">${tr("n. {0}", num)}</span>` : ""}</h1><div>${tr("Data")}: ${esc(d)}<br>${tr("Operatore")}: ${esc($("operatore").value)}</div></div>`;
   const capi = new Map();
   rows.forEach(r => { const k = [r.articolo, r.taglia, r.colore, r.ordine].join("|"); if (!capi.has(k)) capi.set(k, []); capi.get(k).push(r); });
   capi.forEach(rr => {
@@ -1012,6 +1027,101 @@ function resetPrintCharts() {
 }
 function preparaStampa() { renderPrint(); layoutPrintCharts(); }
 $("btnPrint").onclick = () => { preparaStampa(); window.print(); };
+
+// Grafico SVG -> immagine PNG ad alta risoluzione (il generatore PDF non disegna bene gli SVG).
+function svgInPng(svg) {
+  return new Promise((ok, ko) => {
+    const vb = svg.viewBox.baseVal, scala = 3;
+    const k = svg.cloneNode(true);
+    k.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    k.setAttribute("width", vb.width); k.setAttribute("height", vb.height);
+    k.removeAttribute("style");
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = vb.width * scala; c.height = vb.height * scala;
+      const g = c.getContext("2d");
+      g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      ok(c.toDataURL("image/png"));
+    };
+    img.onerror = () => ko(new Error("svg"));
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(k));
+  });
+}
+
+// "Salva PDF": crea direttamente il file PDF (nella cartella Download) con numero progressivo per questo PC.
+function prossimoNumeroPdf() {
+  let n = 0;
+  try { n = parseInt(localStorage.getItem("pc_pdfnum") || "0", 10) || 0; } catch (e) {}
+  return n + 1;
+}
+function caricaHtml2pdf() {
+  if (window.html2pdf) return Promise.resolve();
+  return new Promise((ok, ko) => {
+    const sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+    sc.onload = ok;
+    sc.onerror = () => ko(new Error(tr("Impossibile caricare il generatore PDF: controlla la connessione a internet.")));
+    document.head.appendChild(sc);
+  });
+}
+async function salvaPdf() {
+  if (!rows.length) { alert(tr("Nessuna misura registrata.")); return; }
+  const btn = $("btnPdf"), testo = btn.textContent;
+  btn.disabled = true; btn.textContent = tr("Creo il PDF…");
+  const num = String(prossimoNumeroPdf()).padStart(4, "0");
+  let root = null, holder = null;
+  try {
+    await caricaHtml2pdf();
+    renderPrint(num);
+    layoutPrintCharts();
+    root = document.createElement("div");
+    root.id = "pdfRoot";
+    root.innerHTML = $("printData").innerHTML;
+    const graf = document.createElement("div");
+    graf.className = "pdf-graf";
+    if ($("chartCard").style.breakBefore === "page") graf.classList.add("pdf-break");
+    graf.innerHTML = `<h2>${tr("Grafico")}</h2>`;
+    for (const c of document.querySelectorAll("#charts .chart:not(.no-print)")) {
+      const k = c.cloneNode(true), svg = c.querySelector("svg"), svgK = k.querySelector("svg");
+      if (svg && svgK) {
+        const s2 = svg.cloneNode(true);
+        s2.querySelectorAll(".sel-halo").forEach(x => x.remove());
+        const img = document.createElement("img");
+        img.src = await svgInPng(s2);
+        img.style.width = svg.style.width || "100%";
+        svgK.replaceWith(img);
+      }
+      if (c.style.breakBefore === "page") k.classList.add("pdf-break");
+      graf.appendChild(k);
+    }
+    root.appendChild(graf);
+    const fin = document.createElement("div");
+    fin.innerHTML = $("printFinal").innerHTML;
+    root.appendChild(fin);
+    holder = document.createElement("div");
+    holder.id = "pdfHolder";
+    holder.appendChild(root);
+    document.body.appendChild(holder);
+    await html2pdf().set({
+      margin: 12,
+      filename: `${tr("Prova compressione")} ${num}.pdf`,
+      image: { type: "jpeg", quality: 0.95 },
+      html2canvas: { scale: 2, backgroundColor: "#ffffff" },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css"], before: ".pdf-break", avoid: [".pd-capo", ".chart", ".pf-box", "tr"] }
+    }).from(root).save();
+    try { localStorage.setItem("pc_pdfnum", String(parseInt(num, 10))); } catch (e) {}
+  } catch (e) {
+    alert(e.message || String(e));
+  } finally {
+    if (holder) holder.remove();
+    resetPrintCharts();
+    btn.disabled = false; btn.textContent = testo;
+  }
+}
+$("btnPdf").onclick = salvaPdf;
 window.addEventListener("beforeprint", preparaStampa);
 window.addEventListener("afterprint", resetPrintCharts);
 
