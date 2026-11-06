@@ -148,6 +148,13 @@
 <body>
 
 <header>
+  <span id="tornaHome" class="no-print" style="display:none;align-items:center;gap:12px">
+    <a href="/" title="Torna alla scelta della sezione" style="display:flex;text-decoration:none;color:#4b5563"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M3.5 11.2L12 4l8.5 7.2"/><path d="M5.5 9.8V19a1 1 0 001 1H10v-5.2h4V20h3.5a1 1 0 001-1V9.8"/></svg></a>
+    <a href="/" title="Torna alla home" style="display:block"><img src="/logo.jpg" alt="CzSalus" style="height:22px;display:block"></a>
+  </span>
+  <script>   // home e logo compaiono solo quando la pagina è aperta dal gestionale (non da file né da GitHub Pages)
+    if (/^https?:$/.test(location.protocol) && !/github\.io$/.test(location.hostname)) document.getElementById("tornaHome").style.display = "flex";
+  </script>
   <h1 data-i18n>Prova Compressione</h1>
   <div class="lang no-print" id="langBox"><button data-lang="it">IT</button><button data-lang="en">EN</button></div>
   <div class="status"><span class="dot" id="dot"></span><span id="statusText">Misuratore non collegato</span></div>
