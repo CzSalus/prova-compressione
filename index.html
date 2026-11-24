@@ -643,7 +643,7 @@ function renderCustomBox() {
   if (box.hidden) return;
   const lato = getLato();
   box.innerHTML = `<div class="ct">${tr("Circonferenze custom (cm)")}${lato ? " · " + tr("lato {0}", tr(lato)) : ""}</div><div class="cg">` +
-    g.punti.map(([k, n]) => `<label>${esc(tr(n))}<input type="number" step="0.5" min="0" inputmode="decimal" data-k="${k}" value="${custom.cm[k + "|" + lato] ?? ""}"></label>`).join("") + `</div>`;
+    ordineMisura(g).map(([k, n]) => `<label>${esc(tr(n))}<input type="number" step="0.5" min="0" inputmode="decimal" data-k="${k}" value="${custom.cm[k + "|" + lato] ?? ""}"></label>`).join("") + `</div>`;
 }
 $("btnCustom").onclick = () => { custom.on = !custom.on; saveForm(); renderCustomBox(); renderPoints(); renderLive(); };
 $("customBox").addEventListener("input", e => {
@@ -654,6 +654,9 @@ $("customBox").addEventListener("input", e => {
   if (v > 0) custom.cm[key] = v; else delete custom.cm[key];
   saveForm(); renderPoints(); renderLive();
 });
+
+// Ordine di misura: dall'alto in basso (vita → caviglia, busto → gomito, sotto ginocchio → caviglia).
+const ordineMisura = g => g.punti.slice().reverse();
 
 function selZona() {
   const g = currentGroup();
@@ -685,7 +688,7 @@ function renderPoints() {
   if (!g) { box.innerHTML = `<span class="empty">${esc(tr("Inserisci l'articolo per vedere le zone di misura."))}</span>`; selPunto = null; renderZoneHead(); renderCharts(); return; }
   if (selPunto && !g.punti.some(p => p[0] === selPunto)) selPunto = null;
   const art = $("articolo").value.trim(), tg = $("taglia").value, lato = getLato();
-  box.innerHTML = g.punti.map(([k, n]) => {
+  box.innerHTML = ordineMisura(g).map(([k, n]) => {
     const a = atteso(art, tg, k), zr = zonaRange(k, lato), i = rigaDi(n, lato);
     return `<button data-p="${k}" class="${i >= 0 ? "done" : ""}${k === selPunto ? " sel" : ""}">${tr(n)}` +
       (zr.range ? `<small>${rangeLabel(zr)}</small><span class="mid-hint">${tr("prova a {0} cm", fmtN(zr.mid))}</span>` :
@@ -720,8 +723,10 @@ function registra() {
   };
   const i = rigaDi(z.nome, z.lato);
   if (i >= 0) rows[i] = row; else rows.push(row);
-  // Passa alla prossima zona non ancora misurata.
-  const g = currentGroup(), next = g.punti.find(p => rigaDi(p[1], z.lato) < 0);
+  // Passa alla zona successiva verso il basso non ancora misurata (da coscia → polpaccio);
+  // finite quelle sotto, torna alla prima rimasta in alto.
+  const ord = ordineMisura(currentGroup()), da = ord.findIndex(p => p[0] === z.k);
+  const next = [...ord.slice(da + 1), ...ord.slice(0, da)].find(p => rigaDi(p[1], z.lato) < 0);
   selPunto = next ? next[0] : null; // tutte misurate: nessuna zona selezionata
   saveRows(); renderRows(); renderPoints(); renderLive();
 }
